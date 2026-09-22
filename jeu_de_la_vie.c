@@ -1,5 +1,5 @@
 /*
- * Jeu de la vie (Conway's Game of Life) - version simple avec SDL2
+ * Jeu de la vie (Conway's Game of Life) - version simple avec raylib
  *
  * Commandes :
  *   Clic gauche / glisser : donner la vie a une cellule
@@ -12,10 +12,8 @@
  *   Echap ou Q            : quitter
  */
 
-#include <SDL2/SDL.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
+#include "raylib.h"
+#include <time.h>       /* pour initialiser le hasard */
 
 #define LARGEUR   100          /* nombre de colonnes */
 #define HAUTEUR   70           /* nombre de lignes   */
@@ -82,131 +80,89 @@ static void grille_aleatoire(void)
 {
     for (int y = 0; y < HAUTEUR; y++)
         for (int x = 0; x < LARGEUR; x++)
-            grille[y][x] = (rand() % 100) < 25;   /* environ 25 % de vivantes */
+            grille[y][x] = (GetRandomValue(0, 99) < 25);  /* environ 25 % de vivantes */
 }
 
 /* Dessine les cellules vivantes puis le quadrillage */
-static void dessiner(SDL_Renderer *rendu)
+static void dessiner(int en_pause, int delai)
 {
-    SDL_SetRenderDrawColor(rendu, 15, 15, 20, 255);
-    SDL_RenderClear(rendu);
+    const Color fond    = { 15, 15, 20, 255 };
+    const Color vivante = { 80, 220, 120, 255 };
+    const Color trait   = { 40, 40, 50, 255 };
 
-    SDL_SetRenderDrawColor(rendu, 80, 220, 120, 255);
-    for (int y = 0; y < HAUTEUR; y++) {
-        for (int x = 0; x < LARGEUR; x++) {
-            if (grille[y][x]) {
-                SDL_Rect r = { x * CELLULE, y * CELLULE, CELLULE, CELLULE };
-                SDL_RenderFillRect(rendu, &r);
-            }
-        }
-    }
+    BeginDrawing();
+    ClearBackground(fond);
 
-    SDL_SetRenderDrawColor(rendu, 40, 40, 50, 255);
+    for (int y = 0; y < HAUTEUR; y++)
+        for (int x = 0; x < LARGEUR; x++)
+            if (grille[y][x])
+                DrawRectangle(x * CELLULE, y * CELLULE, CELLULE, CELLULE, vivante);
+
     for (int x = 0; x <= LARGEUR; x++)
-        SDL_RenderDrawLine(rendu, x * CELLULE, 0, x * CELLULE, FENETRE_H);
+        DrawLine(x * CELLULE, 0, x * CELLULE, FENETRE_H, trait);
     for (int y = 0; y <= HAUTEUR; y++)
-        SDL_RenderDrawLine(rendu, 0, y * CELLULE, FENETRE_L, y * CELLULE);
+        DrawLine(0, y * CELLULE, FENETRE_L, y * CELLULE, trait);
 
-    SDL_RenderPresent(rendu);
+    if (en_pause)
+        DrawText("PAUSE", 10, 10, 20, RAYWHITE);
+    else
+        DrawText(TextFormat("%d ms / generation", delai), 10, 10, 20, GRAY);
+
+    EndDrawing();
 }
 
-int main(int argc, char *argv[])
+int main(void)
 {
-    (void)argc;
-    (void)argv;
+    InitWindow(FENETRE_L, FENETRE_H, "Jeu de la vie");
+    SetTargetFPS(60);
 
-    if (SDL_Init(SDL_INIT_VIDEO) != 0) {
-        fprintf(stderr, "Erreur SDL_Init : %s\n", SDL_GetError());
-        return 1;
-    }
-
-    SDL_Window *fenetre = SDL_CreateWindow(
-        "Jeu de la vie",
-        SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-        FENETRE_L, FENETRE_H, 0);
-
-    if (!fenetre) {
-        fprintf(stderr, "Erreur fenetre : %s\n", SDL_GetError());
-        SDL_Quit();
-        return 1;
-    }
-
-    SDL_Renderer *rendu = SDL_CreateRenderer(fenetre, -1, SDL_RENDERER_ACCELERATED);
-    if (!rendu) {
-        fprintf(stderr, "Erreur rendu : %s\n", SDL_GetError());
-        SDL_DestroyWindow(fenetre);
-        SDL_Quit();
-        return 1;
-    }
-
-    srand((unsigned)time(NULL));
+    /* GetTime() vaut ~0 au demarrage : on prend l'heure systeme pour que
+       la grille aleatoire soit differente a chaque lancement. */
+    SetRandomSeed((unsigned int)time(NULL));
     grille_aleatoire();
 
-    int en_marche = 1;      /* boucle principale */
     int en_pause = 0;       /* simulation figee ou non */
     int delai = 100;        /* millisecondes entre deux generations */
-    Uint32 dernier_tour = SDL_GetTicks();
+    double dernier_tour = GetTime();
 
-    while (en_marche) {
-        SDL_Event e;
+    /* WindowShouldClose() est vrai si on ferme la fenetre ou si on tape Echap */
+    while (!WindowShouldClose() && !IsKeyPressed(KEY_Q)) {
 
-        while (SDL_PollEvent(&e)) {
-            if (e.type == SDL_QUIT) {
-                en_marche = 0;
-            }
-            else if (e.type == SDL_KEYDOWN) {
-                switch (e.key.keysym.sym) {
-                case SDLK_ESCAPE:
-                case SDLK_q:      en_marche = 0;              break;
-                case SDLK_SPACE:  en_pause = !en_pause;       break;
-                case SDLK_n:
-                    if (en_pause)
-                        generation_suivante();
-                    break;
-                case SDLK_r:      grille_aleatoire();         break;
-                case SDLK_c:      vider_grille();             break;
-                case SDLK_PLUS:
-                case SDLK_EQUALS:
-                case SDLK_KP_PLUS:
-                    delai -= 20;
-                    if (delai < 10) delai = 10;
-                    break;
-                case SDLK_MINUS:
-                case SDLK_KP_MINUS:
-                    delai += 20;
-                    if (delai > 1000) delai = 1000;
-                    break;
-                }
-            }
-            else if (e.type == SDL_MOUSEBUTTONDOWN || e.type == SDL_MOUSEMOTION) {
-                /* On dessine avec la souris quand un bouton est enfonce */
-                int bx, by;
-                Uint32 boutons = SDL_GetMouseState(&bx, &by);
+        /* ----- clavier ----- */
+        if (IsKeyPressed(KEY_SPACE)) en_pause = !en_pause;
+        if (IsKeyPressed(KEY_R))     grille_aleatoire();
+        if (IsKeyPressed(KEY_C))     vider_grille();
+        if (IsKeyPressed(KEY_N) && en_pause) generation_suivante();
 
-                int x = bx / CELLULE;
-                int y = by / CELLULE;
-
-                if (x >= 0 && x < LARGEUR && y >= 0 && y < HAUTEUR) {
-                    if (boutons & SDL_BUTTON(SDL_BUTTON_LEFT))
-                        grille[y][x] = 1;
-                    else if (boutons & SDL_BUTTON(SDL_BUTTON_RIGHT))
-                        grille[y][x] = 0;
-                }
-            }
+        if (IsKeyPressed(KEY_EQUAL) || IsKeyPressed(KEY_KP_ADD)) {
+            delai -= 20;
+            if (delai < 10) delai = 10;
+        }
+        if (IsKeyPressed(KEY_MINUS) || IsKeyPressed(KEY_KP_SUBTRACT)) {
+            delai += 20;
+            if (delai > 1000) delai = 1000;
         }
 
-        /* Avancer d'une generation quand le delai est ecoule */
-        if (!en_pause && SDL_GetTicks() - dernier_tour >= (Uint32)delai) {
+        /* ----- souris : on dessine tant qu'un bouton est enfonce ----- */
+        int x = GetMouseX() / CELLULE;
+        int y = GetMouseY() / CELLULE;
+
+        if (x >= 0 && x < LARGEUR && y >= 0 && y < HAUTEUR) {
+            if (IsMouseButtonDown(MOUSE_BUTTON_LEFT))
+                grille[y][x] = 1;
+            else if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT))
+                grille[y][x] = 0;
+        }
+
+        /* ----- avancer d'une generation quand le delai est ecoule ----- */
+        if (!en_pause && (GetTime() - dernier_tour) * 1000.0 >= (double)delai) {
             generation_suivante();
-            dernier_tour = SDL_GetTicks();
+            dernier_tour = GetTime();
         }
 
-        dessiner(rendu);
-        SDL_Delay(10);          /* on menage le processeur */
+        dessiner(en_pause, delai);
     }
 
-    SDL_DestroyRenderer(rendu);
-    SDL_DestroyWindow(fenetre);
-    SDL_Quit();
+    CloseWindow();
     return 0;
 }
