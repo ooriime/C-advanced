@@ -27,16 +27,29 @@ gcc -Wall -Wextra -O2 $(pkg-config --cflags raylib) \
 
 ## Commandes
 
-| Touche                | Effet                                   |
-|-----------------------|-----------------------------------------|
-| Clic gauche / glisser | Donner la vie a une cellule             |
-| Clic droit / glisser  | Tuer une cellule                        |
-| Espace                | Pause / reprise                         |
-| N                     | Avancer d'une generation (en pause)     |
-| R                     | Grille aleatoire                        |
-| C                     | Effacer la grille                       |
-| + / -                 | Plus rapide / plus lent                 |
-| Echap ou Q            | Quitter                                 |
+| Touche                | Effet                                       |
+|-----------------------|---------------------------------------------|
+| Clic gauche           | Creer ou supprimer une cellule              |
+| Clic gauche + glisser | Tracer ou effacer toute une trainee         |
+| Clic droit            | Supprimer une cellule (gomme)               |
+| Espace                | Pause / reprise                             |
+| C                     | Tout effacer                                |
+| R                     | Nouvelle grille aleatoire                   |
+| N                     | Avancer d'une generation (en pause)         |
+| + / -                 | Plus rapide / plus lent                     |
+| Echap ou Q            | Quitter                                     |
+
+Le clic gauche fonctionne comme un interrupteur : cliquer sur une case vide
+cree une cellule, cliquer sur une cellule vivante la supprime. En gardant le
+bouton enfonce, le mode choisi au moment du clic est conserve, ce qui permet
+de dessiner (ou d'effacer) une ligne entiere d'un seul geste.
+
+## Fenetre redimensionnable
+
+La fenetre peut etre redimensionnee librement. La taille d'une cellule ne
+change pas : c'est le **nombre** de colonnes et de lignes qui s'adapte.
+Agrandir la fenetre donne donc plus de place au jeu, et les cellules deja
+posees restent en place. Le nombre de cellules est affiche en haut a gauche.
 
 ## Les regles
 
