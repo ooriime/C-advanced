@@ -1,21 +1,22 @@
-# Jeu de la vie (SDL2)
+# Jeu de la vie (raylib)
 
-Le jeu de la vie de Conway, en C avec SDL2.
+Le jeu de la vie de Conway, en C avec raylib.
 
 ## Compilation
 
 Dans un terminal MSYS2 **UCRT64** :
 
 ```sh
-pacman -S --needed mingw-w64-ucrt-x86_64-SDL2   # une seule fois
+pacman -S --needed mingw-w64-ucrt-x86_64-raylib   # une seule fois
 make
 ```
 
 Sans Makefile :
 
 ```sh
-gcc -Wall -Wextra -O2 $(pkg-config --cflags sdl2) \
-    -o jeu_de_la_vie.exe jeu_de_la_vie.c $(pkg-config --libs sdl2)
+gcc -Wall -Wextra -O2 $(pkg-config --cflags raylib) \
+    -o jeu_de_la_vie.exe jeu_de_la_vie.c \
+    $(pkg-config --libs raylib) -lopengl32 -lgdi32 -lwinmm
 ```
 
 ## Lancement
